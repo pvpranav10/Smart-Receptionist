@@ -19,9 +19,9 @@ def create_app() -> FastAPI:
         version="0.1.0",
         description="FastAPI wrapper for Cliniko endpoints exposed as REST tool APIs.",
     )
-    app.include_router(appointments_router, prefix="/appointments", tags=["appointments"])
+    app.include_router(appointments_router, prefix="/individual_appointments ", tags=["individual_appointments "])
     app.include_router(patients_router, prefix="/patients", tags=["patients"])
-    app.include_router(search_router, tags=["search"])
+    app.include_router(search_router,prefix="/businesses", tags=["search"])
 
     @app.get("/health", tags=["health"])
     async def health():

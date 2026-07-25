@@ -7,12 +7,40 @@ from fastapi import APIRouter, HTTPException
 
 from app.clients.cliniko_client import ClinikoClient
 from app.config import settings
-from app.schemas.appointments import AppointmentBookingRequest, AppointmentBookingResponse
+from app.schemas.appointments import AppointmentBookingRequest, AppointmentBookingResponse, AppointmentCancelRequest, AppointmentUpdateRequest
 
 router = APIRouter()
 
 
-@router.post("/book", response_model=AppointmentBookingResponse)
+@router.get("/{appointment_id}", response_model=AppointmentBookingResponse)
+async def get_individual_appointment(appointment_id: int) -> AppointmentBookingResponse:
+    client = ClinikoClient(settings.cliniko_api_key, settings.cliniko_base_url)
+    try:
+        result = await client.get_individual_appointment(appointment_id)
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 404:
+            raise HTTPException(status_code=404, detail="Appointment not found")
+        raise HTTPException(status_code=exc.response.status_code, detail=exc.response.text)
+    finally:
+        await client.close()
+
+    appointment = result.get("appointment", result)
+    return AppointmentBookingResponse(
+        created_at=appointment.get("created_at"),
+        deleted_at=appointment.get("deleted_at"),
+        did_not_arrive=appointment.get("did_not_arrive"),
+        ends_at=appointment.get("ends_at"),
+        id=str(appointment.get("id", appointment_id)) if appointment.get("id") is not None else None,
+        patient_arrived=appointment.get("patient_arrived"),
+        patient_name=appointment.get("patient_name"),
+        repeat_rule=appointment.get("repeat_rule", {}),
+        repeats=appointment.get("repeats"),
+        sms_reminder_sent=appointment.get("sms_reminder_sent"),
+        starts_at=appointment.get("starts_at"),
+        raw_data=result,
+    )
+
+@router.post("", response_model=AppointmentBookingResponse)
 async def book_appointment(payload: AppointmentBookingRequest) -> AppointmentBookingResponse:
     location_id = settings.branch_location_map.get(payload.branch_name)
     if location_id is None:
@@ -27,17 +55,85 @@ async def book_appointment(payload: AppointmentBookingRequest) -> AppointmentBoo
             starts_at=payload.starts_at,
             note=payload.note,
             provider_id=payload.provider_id,
+            ends_at=payload.ends_at,
+            patient_case_id=payload.patient_case_id,
         )
     except httpx.HTTPStatusError as exc:
         raise HTTPException(status_code=exc.response.status_code, detail=exc.response.text)
     finally:
         await client.close()
 
-    appointment = result.get("appointment", {})
+    appointment = result.get("appointment", result)
     return AppointmentBookingResponse(
-        appointment_id=appointment.get("id", 0),
-        status=appointment.get("status", "created"),
+        created_at=appointment.get("created_at"),
+        deleted_at=appointment.get("deleted_at"),
+        did_not_arrive=appointment.get("did_not_arrive"),
+        ends_at=appointment.get("ends_at"),
+        id=str(appointment.get("id", 0)) if appointment.get("id") is not None else None,
+        patient_arrived=appointment.get("patient_arrived"),
+        patient_name=appointment.get("patient_name"),
+        repeat_rule=appointment.get("repeat_rule", {}),
+        repeats=appointment.get("repeats"),
+        sms_reminder_sent=appointment.get("sms_reminder_sent"),
         starts_at=appointment.get("starts_at", payload.starts_at),
-        location_id=appointment.get("location_id", location_id),
         raw_data=result,
     )
+# @router.post("", response_model=AppointmentBookingResponse)
+# async def update_individual_appointment(appointment_id: int, payload: AppointmentUpdateRequest) -> AppointmentBookingResponse:
+#     client = ClinikoClient(settings.cliniko_api_key, settings.cliniko_base_url)
+#     try:
+#         result = await client.update_individual_appointment(appointment_id, payload.model_dump(exclude_none=True))
+#     except httpx.HTTPStatusError as exc:
+#         if exc.response.status_code == 404:
+#             raise HTTPException(status_code=404, detail="Appointment not found")
+#         raise HTTPException(status_code=exc.response.status_code, detail=exc.response.text)
+#     finally:
+#         await client.close()
+
+#     appointment = result.get("appointment", result)
+#     return AppointmentBookingResponse(
+#         created_at=appointment.get("created_at"),
+#         deleted_at=appointment.get("deleted_at"),
+#         did_not_arrive=appointment.get("did_not_arrive"),
+#         ends_at=appointment.get("ends_at"),
+#         id=str(appointment.get("id", appointment_id)) if appointment.get("id") is not None else None,
+#         patient_arrived=appointment.get("patient_arrived"),
+#         patient_name=appointment.get("patient_name"),
+#         repeat_rule=appointment.get("repeat_rule", {}),
+#         repeats=appointment.get("repeats"),
+#         sms_reminder_sent=appointment.get("sms_reminder_sent"),
+#         starts_at=appointment.get("starts_at"),
+#         raw_data=result,
+#     )
+
+
+# @router.patch("/{appointment_id}/cancel", response_model=AppointmentBookingResponse)
+# async def cancel_individual_appointment(appointment_id: int, payload: AppointmentCancelRequest) -> AppointmentBookingResponse:
+#     client = ClinikoClient(settings.cliniko_api_key, settings.cliniko_base_url)
+#     try:
+#         result = await client.cancel_individual_appointment(appointment_id, payload.model_dump(exclude_none=True))
+#     except httpx.HTTPStatusError as exc:
+#         if exc.response.status_code == 404:
+#             raise HTTPException(status_code=404, detail="Appointment not found")
+#         raise HTTPException(status_code=exc.response.status_code, detail=exc.response.text)
+#     finally:
+#         await client.close()
+
+#     appointment = result.get("appointment", result)
+#     return AppointmentBookingResponse(
+#         created_at=appointment.get("created_at"),
+#         deleted_at=appointment.get("deleted_at"),
+#         did_not_arrive=appointment.get("did_not_arrive"),
+#         ends_at=appointment.get("ends_at"),
+#         id=str(appointment.get("id", appointment_id)) if appointment.get("id") is not None else None,
+#         patient_arrived=appointment.get("patient_arrived"),
+#         patient_name=appointment.get("patient_name"),
+#         repeat_rule=appointment.get("repeat_rule", {}),
+#         repeats=appointment.get("repeats"),
+#         sms_reminder_sent=appointment.get("sms_reminder_sent"),
+#         starts_at=appointment.get("starts_at"),
+#         raw_data=result,
+#     )
+
+
+

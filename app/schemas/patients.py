@@ -5,6 +5,16 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
+class PatientCreateRequest(BaseModel):
+    first_name: str | None = None
+    last_name: str | None = None
+    email: str | None = None
+    phone: str | None = None
+
+    class Config:
+        extra = "allow"
+
+
 class PatientDetailResponse(BaseModel):
     patient_id: int
     first_name: str
