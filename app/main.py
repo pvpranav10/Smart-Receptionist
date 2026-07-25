@@ -8,10 +8,10 @@ from app.api.patients import router as patients_router
 from app.api.search import router as search_router
 from dotenv import load_dotenv
 
-supabase: Client = create_client(
-    os.environ.get("SUPABASE_URL"),
-    os.environ.get("SUPABASE_KEY")
-)
+# supabase: Client = create_client(
+#     os.environ.get("SUPABASE_URL"),
+#     os.environ.get("SUPABASE_KEY")
+# )
 
 def create_app() -> FastAPI:
     app = FastAPI(

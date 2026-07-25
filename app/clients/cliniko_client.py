@@ -9,9 +9,10 @@ class ClinikoClient:
     def __init__(self, api_key: str, base_url: str) -> None:
         self.base_url = base_url.rstrip("/")
         self.headers = {
-            "Authorization": f"Bearer {api_key}",
+            "Authorization": f"Basic {api_key}",
             "Accept": "application/json",
             "Content-Type": "application/json",
+            "User-Agent": "test",
         }
         self.client = httpx.AsyncClient(base_url=self.base_url, headers=self.headers, timeout=30.0)
 
