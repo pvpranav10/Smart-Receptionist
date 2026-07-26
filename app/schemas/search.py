@@ -59,3 +59,6 @@ class AvailableTimeResponse(BaseModel):
     to_date: str
     available_times: list[dict[str, Any]] = Field(default_factory=list)
     raw_data: dict[str, Any] = Field(default_factory=dict)
+
+class PractitionersRequest(BaseModel):
+    business_id: int

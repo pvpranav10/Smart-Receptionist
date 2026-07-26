@@ -13,6 +13,7 @@ from app.schemas.search import (
     AvailableTimeResponse,
     BusinessesResponse,
     BusinessSummary,
+    PractitionersRequest,
     PractitionersResponse,
     PractitionerSummary
 )
@@ -48,11 +49,11 @@ async def list_businesses() -> BusinessesResponse:
     )
 
 
-@router.get("/businesses/{business_id}/practitioners", response_model=PractitionersResponse)
-async def list_practitioners_for_businesses(business_id: int) -> PractitionersResponse:
+@router.post("/practitioners", response_model=PractitionersResponse)
+async def list_practitioners_for_businesses(request:PractitionersRequest) -> PractitionersResponse:
     client = ClinikoClient(settings.cliniko_api_key, settings.cliniko_base_url)
     try:
-        result = await client.list_practitioners_for_businesses(business_id)
+        result = await client.list_practitioners_for_businesses(request.business_id)
     except httpx.HTTPStatusError as exc:
         raise HTTPException(status_code=exc.response.status_code, detail=exc.response.text)
     finally:
@@ -75,14 +76,14 @@ async def list_practitioners_for_businesses(business_id: int) -> PractitionersRe
     ]
 
     return PractitionersResponse(
-        business_id=business_id,
+        business_id=request.business_id,
         practitioners=normalized_practitioners,
         raw_data=result,
     )
 
 
-@router.get(
-    "/businesses/{business_id}/practitioners/{practitioner_id}/appointment_types/{appointment_type_id}/available_times",
+@router.post(
+    "/businesses/practitioners/appointment_types/available_times",
     response_model=AvailableTimeResponse,
 )
 async def get_available_times(

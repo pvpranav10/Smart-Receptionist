@@ -25,7 +25,7 @@ def create_app() -> FastAPI:
     app.include_router(patients_router, prefix="/patients", tags=["patients"])
     app.include_router(search_router,prefix="/businesses", tags=["search"])
 
-    @app.get("", tags=["health"])
+    @app.get("/health", tags=["health"])
     async def health():
         return {"status": "ok"}
 
@@ -105,9 +105,13 @@ def create_app() -> FastAPI:
 
         return response
 
-    @app.get("/call_summary", tags=["intiated"])
-    async def intiated(payload:dict):
-        
+    @app.post("/log_call_summary", tags=["log_call_summary  "])
+    async def log_call_summary(payload:dict):
+        call_summary = payload.get("summary")
+        db_client = SupabaseClient()
+        response = await db_client.update("conversation_state",{"conversation_summary":call_summary},{"conversation_id":payload.get("user_number")},"partial")
+
+
     return app
 
 

@@ -49,16 +49,33 @@ class SupabaseClient:
         except Exception as e:
             raise Exception(f"Error selecting from {table_name}: {str(e)}")
 
-    async def update(self, table_name: str, data: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
+    async def update(self, table_name: str, data: dict[str, Any], filters: dict[str, Any], match_type: str = "exact") -> dict[str, Any]:
         """Update records in a table based on filters"""
         try:
-            query = self.client.table(table_name)
-            
-            for key, value in filters.items():
-                query = query.eq(key, value)
-            
-            response = query.update(data).execute()
-            return response.data
+            client = self.client.table(table_name)
+            select_query = client.select("*")
+
+            if filters:
+                for key, value in filters.items():
+                    if match_type == "partial":
+                        select_query = select_query.ilike(key, f"%{value}%")
+                    else:  # exact match
+                        select_query = select_query.eq(key, value)
+            select_response = select_query.execute()
+            records = select_response.data or []
+
+            if not records:
+                raise Exception(f"No matching records found in {table_name} for filters {filters}")
+
+            latest_record = max(records, key=lambda record: record.get("created_at", ""))
+            conversation_id = latest_record.get("conversation_id")
+
+            if conversation_id is None:
+                raise Exception("Latest record is missing conversation_id")
+
+            update_query = client.update(data).eq("conversation_id", conversation_id)
+            updated_response = update_query.execute()
+            return updated_response.data
         except Exception as e:
             raise Exception(f"Error updating {table_name}: {str(e)}")
 
