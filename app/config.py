@@ -10,7 +10,8 @@ class Settings(BaseSettings):
     bolna_agent_id: str | None = Field(None, env="BOLNA_AGENT_ID")
     bolna_from_phone_number: str | None = Field(None, env="BOLNA_FROM_PHONE_NUMBER")
     branch_location_map: dict[str, int] = Field(default_factory=dict, env="BRANCH_LOCATION_MAP")
-
+    supabase_url :str = Field(None, env="SUPABASE_URL")
+    supabase_key :str = Field(None,env="SUPABASE_KEY")
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

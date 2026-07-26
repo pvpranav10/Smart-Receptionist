@@ -7,9 +7,10 @@ from fastapi import APIRouter, HTTPException
 
 from app.clients.cliniko_client import ClinikoClient
 from app.config import settings
+from app.helpers.conversation_helper import generate_conversation_id
 from app.schemas.patients import PatientCreateRequest, PatientDetailResponse
-
-
+from app.clients.supabase_client import SupabaseClient
+from datetime import datetime, timedelta
 
 router = APIRouter()
 
@@ -41,22 +42,42 @@ async def list_patients() -> list[PatientDetailResponse]:
 
 @router.post("", response_model=PatientDetailResponse)
 async def create_patient(payload: PatientCreateRequest) -> PatientDetailResponse:
-    client = ClinikoClient(settings.cliniko_api_key, settings.cliniko_base_url)
     try:
-        result = await client.create_patient(payload.model_dump(exclude_none=True))
+        client = ClinikoClient(settings.cliniko_api_key, settings.cliniko_base_url)
+        db_client = SupabaseClient()
+        request_payload = {
+        "first_name": payload.first_name,
+        "last_name": payload.last_name,
+        "email": payload.email,
+        }
+
+        if payload.phone:
+            request_payload["patient_phone_numbers"] = [
+                {"number": payload.phone.lstrip('+'), "phone_type": "Mobile"}
+            ]
+
+            response = await client.create_patient(request_payload)
+            conversation_id = generate_conversation_id(payload.phone)
+            new_state = {
+                            "conversation_id": conversation_id,
+                            "current_step": "START",
+                            "phone_number": payload.phone,
+                           "expires_at": str((datetime.now() + timedelta(minutes=20)).isoformat()),
+                            "patient_id": response.get("id"),
+                            "updated_at":str(datetime.now())
+                        }
+            await db_client.insert("conversation_state", new_state)
     except httpx.HTTPStatusError as exc:
         raise HTTPException(status_code=exc.response.status_code, detail=exc.response.text)
     finally:
         await client.close()
 
-    patient = result.get("patient", result)
     return PatientDetailResponse(
-        patient_id=patient.get("id", 0),
-        first_name=patient.get("first_name", payload.first_name or ""),
-        last_name=patient.get("last_name", payload.last_name or ""),
-        email=patient.get("email", payload.email),
-        phone=patient.get("phone"),
-        raw_data=patient,
+        patient_id=response.get("id", 0),
+        first_name=response.get("first_name", payload.first_name or ""),
+        last_name=response.get("last_name", payload.last_name or ""),
+        email=response.get("email", payload.email),
+        phone=response.get("phone"),
     )
 
 

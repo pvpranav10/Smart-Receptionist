@@ -1,21 +1,19 @@
 import json
 from multiprocessing.connection import Client
 import os
+from datetime import datetime, timedelta
 
 from fastapi import FastAPI
-from supabase import create_client, Client
 from app.api.appointments import router as appointments_router
 from app.api.patients import router as patients_router
 from app.api.search import router as search_router
 from app.clients.bolna_client import BolnaClient
 from app.clients.cliniko_client import ClinikoClient
+from app.clients.supabase_client import SupabaseClient
 from app.config import settings
 from dotenv import load_dotenv
 
-# supabase: Client = create_client(
-#     os.environ.get("SUPABASE_URL"),
-#     os.environ.get("SUPABASE_KEY")
-# )
+
 
 def create_app() -> FastAPI:
     app = FastAPI(
@@ -27,7 +25,7 @@ def create_app() -> FastAPI:
     app.include_router(patients_router, prefix="/patients", tags=["patients"])
     app.include_router(search_router,prefix="/businesses", tags=["search"])
 
-    @app.get("/health", tags=["health"])
+    @app.get("", tags=["health"])
     async def health():
         return {"status": "ok"}
 
@@ -39,6 +37,8 @@ def create_app() -> FastAPI:
         phone_number = contact_number
 
         client = ClinikoClient(settings.cliniko_api_key, settings.cliniko_base_url)
+        db_client = SupabaseClient()
+
         try:
             result = await client.list_patients()
         finally:
@@ -54,23 +54,60 @@ def create_app() -> FastAPI:
                 break
 
         if matched_patient is None:
-            return {"status": "ok", "message": "No matching patient found", "contact_number": contact_number}
-
-        bolna_client = BolnaClient(settings.bolna_api_key or "", settings.bolna_base_url)
-        try:
-            customer_name = " ".join(
-                part for part in [matched_patient.get("first_name"), matched_patient.get("last_name")] if part
-            ).strip()
-            response = {
-                
-                    "first_name": matched_patient.get("first_name"),
-                    "last_name": matched_patient.get("last_name"),
+             response = {
+                        "from_number":contact_number
+                     }
+             return response
+        
+        # Handle conversation state
+        conversation_state = db_client.select("conversation_state", {"conversation_id": contact_number.lstrip('+')}, "partial")
+        
+        # If no conversation state exists or it's expired, create a new one
+        if not conversation_state or (isinstance(conversation_state, list) and len(conversation_state) == 0):
+            # Create new conversation state
+            new_state = {
+                "conversation_id": contact_number.lstrip('+'),
+                "current_step": "START",
+                "created_at": datetime.now().isoformat(),
+                "expires_at": (datetime.now() + timedelta(minutes=10)).isoformat(),
+                "patient_id": matched_patient.get("id"),
             }
-        finally:
-            await bolna_client.close()
+            await db_client.insert("conversation_state", new_state)
+            conversation_state = new_state
+        else:
+            # Handle list response from select
+            if isinstance(conversation_state, list) and len(conversation_state) > 0:
+                state_record = conversation_state[0]
+                expires_at = datetime.fromisoformat(state_record.get("expires_at", ""))
+                
+                if expires_at < datetime.now():
+                    # Expired, create new conversation state
+                    new_state = {
+                        "conversation_id": contact_number.lstrip('+'),
+                        "current_step": "START",
+                        "created_at": datetime.now().isoformat(),
+                        "expires_at": (datetime.now() + timedelta(hours=24)).isoformat(),
+                        "patient_id": matched_patient.get("id"),
+                    }
+                    await db_client.insert("conversation_state", new_state)
+                    conversation_state = new_state
+                else:
+                    # Use existing state
+                    conversation_state = state_record
+
+            
+
+        response = {
+            "first_name": matched_patient.get("first_name"),
+            "last_name": matched_patient.get("last_name"),
+        }
+
 
         return response
 
+    @app.get("/call_summary", tags=["intiated"])
+    async def intiated(payload:dict):
+        
     return app
 
 

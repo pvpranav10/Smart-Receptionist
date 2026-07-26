@@ -4,6 +4,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from app.schemas.basic import BaseSchema
+
 
 class PatientCreateRequest(BaseModel):
     first_name: str | None = None
