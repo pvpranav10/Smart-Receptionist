@@ -1,3 +1,4 @@
+import json
 from multiprocessing.connection import Client
 import os
 
@@ -30,14 +31,12 @@ def create_app() -> FastAPI:
     async def health():
         return {"status": "ok"}
 
-    @app.post("/intiated", tags=["intiated"])
-    async def intiated(payload: dict | None = None):
-        if not payload:
-            return {"status": "ok", "message": "No payload provided"}
+    @app.get("/intiated", tags=["intiated"])
+    async def intiated(contact_number: str | None = None, agent_id: str | None = None, execution_id: str | None = None):
+        if not contact_number:
+            return {"status": "ok", "message": "No contact number provided"}
 
-        phone_number = None
-        if isinstance(payload, dict):
-            phone_number = payload.get("user_number") or payload.get("phone") or payload.get("mobile")
+        phone_number = contact_number
 
         client = ClinikoClient(settings.cliniko_api_key, settings.cliniko_base_url)
         try:
@@ -55,29 +54,22 @@ def create_app() -> FastAPI:
                 break
 
         if matched_patient is None:
-            return {"status": "ok", "message": "No matching patient found", "payload": payload}
+            return {"status": "ok", "message": "No matching patient found", "contact_number": contact_number}
 
         bolna_client = BolnaClient(settings.bolna_api_key or "", settings.bolna_base_url)
         try:
             customer_name = " ".join(
                 part for part in [matched_patient.get("first_name"), matched_patient.get("last_name")] if part
             ).strip()
-            bolna_payload = {
-                "agent_id":settings.bolna_agent_id,
-                "recipient_phone_number": phone_number,
-                "from_phone_number": payload.get("from_phone_number") or settings.bolna_from_phone_number,
-                "user_data": {
+            response = {
+                
                     "first_name": matched_patient.get("first_name"),
                     "last_name": matched_patient.get("last_name"),
-                },
             }
-            await bolna_client.initiate_user_variables_bolna(bolna_payload)
         finally:
             await bolna_client.close()
 
-        return {
-            "status": "ok",
-        }
+        return response
 
     return app
 
