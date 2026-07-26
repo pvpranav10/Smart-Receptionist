@@ -76,6 +76,11 @@ class ClinikoClient:
         response.raise_for_status()
         return response.json()
 
+    async def list_patients(self) -> dict[str, Any]:
+        response = await self.client.get("/patients")
+        response.raise_for_status()
+        return response.json()
+
     async def list_businesses(self) -> dict[str, Any]:
         response = await self.client.get("/businesses")
         response.raise_for_status()

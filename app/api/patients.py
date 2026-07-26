@@ -9,7 +9,34 @@ from app.clients.cliniko_client import ClinikoClient
 from app.config import settings
 from app.schemas.patients import PatientCreateRequest, PatientDetailResponse
 
+
+
 router = APIRouter()
+
+
+@router.get("", response_model=list[PatientDetailResponse])
+async def list_patients() -> list[PatientDetailResponse]:
+    client = ClinikoClient(settings.cliniko_api_key, settings.cliniko_base_url)
+    try:
+        result = await client.list_patients()
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(status_code=exc.response.status_code, detail=exc.response.text)
+    finally:
+        await client.close()
+
+    patients = result.get("patients", [])
+    return [
+        PatientDetailResponse(
+            patient_id=patient.get("id", 0),
+            first_name=patient.get("first_name", ""),
+            last_name=patient.get("last_name", ""),
+            email=patient.get("email"),
+            phone=patient.get("phone"),
+            raw_data=patient,
+        )
+        for patient in patients
+        if isinstance(patient, dict)
+    ]
 
 
 @router.post("", response_model=PatientDetailResponse)
