@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 from typing import Any
 
 import httpx
@@ -8,11 +9,15 @@ import httpx
 class ClinikoClient:
     def __init__(self, api_key: str, base_url: str) -> None:
         self.base_url = base_url.rstrip("/")
+        credentials = f"{api_key}:"
+        encoded_credentials = base64.b64encode(credentials.encode("utf-8")).decode("ascii")
         self.headers = {
-            "Authorization": f"Basic {api_key}",
+            "Authorization": f"Basic {encoded_credentials}",
             "Accept": "application/json",
             "Content-Type": "application/json",
             "User-Agent": "test",
+            "username": api_key,
+            "password": "",
         }
         self.client = httpx.AsyncClient(base_url=self.base_url, headers=self.headers, timeout=30.0)
 

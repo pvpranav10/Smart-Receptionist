@@ -20,7 +20,7 @@ from app.schemas.search import (
 router = APIRouter()
 
 
-@router.get("/businesses", response_model=BusinessesResponse)
+@router.get("", response_model=BusinessesResponse)
 async def list_businesses() -> BusinessesResponse:
     client = ClinikoClient(settings.cliniko_api_key, settings.cliniko_base_url)
     try:
