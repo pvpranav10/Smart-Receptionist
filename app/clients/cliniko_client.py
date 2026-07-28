@@ -25,18 +25,17 @@ class ClinikoClient:
         self,
         patient_id: int,
         appointment_type_id: int,
-        location_id: int,
+        business_id: int,
         starts_at: str,
-        note: str | None = None,
-        provider_id: int | None = None,
+        practitioner_id: int | None = None,
         ends_at: str | None = None,
         patient_case_id: int | None = None,
     ) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "appointment_type_id": str(appointment_type_id),
-            "business_id": str(location_id),
+            "business_id": str(business_id),
             "patient_id": str(patient_id),
-            "practitioner_id": str(provider_id) if provider_id is not None else None,
+            "practitioner_id": str(practitioner_id) if practitioner_id is not None else None,
             "starts_at": starts_at,
             "repeat_rule": {},
         }
@@ -111,7 +110,7 @@ class ClinikoClient:
         self,
         start_date: str,
         end_date: str,
-        location_ids: list[int] | None = None,
+        business_ids: list[int] | None = None,
     ) -> dict[str, Any]:
         params: dict[str, Any] = {
             "since": start_date,

@@ -6,38 +6,34 @@ from pydantic import BaseModel, Field
 
 
 class AppointmentBookingRequest(BaseModel):
-    patient_id: int
-    appointment_type_id: int
-    branch_name: str
+    patient_case_id: str
+    appointment_type_id: str
+    business_id: str
     starts_at: str
     ends_at: str | None = None
     note: str | None = None
-    provider_id: int | None = None
-    patient_case_id: int | None = None
+    practitioner_id: str | None = None
+    patient_id: str | None = None
 
     class Config:
         extra = "allow"
 
 
 class AppointmentUpdateRequest(BaseModel):
-    appointment_type_id: int | None = None
-    business_id: int | None = None
+    appointment_type_id: str | None = "1999469371147169774"
+    business_id: str | None = None
     ends_at: str | None = None
-    notes: str | None = None
-    patient_id: int | None = None
-    patient_case_id: int | None = None
-    practitioner_id: int | None = None
+    patient_id: str | None = None
+    patient_case_id: str | None = None
+    practitioner_id: str | None = None
     starts_at: str | None = None
-    repeat_rule: dict[str, Any] | None = None
+    appointement_id :str
 
     class Config:
         extra = "allow"
 
 
-class AppointmentCancelRequest(BaseModel):
-    cancellation_note: str | None = None
-    cancellation_reason: int | None = None
-    apply_to_repeats: bool | None = None
+class AppointmentCancelRequest(AppointmentUpdateRequest):
 
     class Config:
         extra = "allow"

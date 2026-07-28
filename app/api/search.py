@@ -9,6 +9,7 @@ from app.clients.cliniko_client import ClinikoClient
 from app.config import settings
 from app.schemas.search import (
     AppointmentSlot,
+    AvailabilityRequest,
     AvailabilityResponse,
     AvailableTimeResponse,
     BusinessesResponse,
@@ -83,39 +84,29 @@ async def list_practitioners_for_businesses(request:PractitionersRequest) -> Pra
 
 
 @router.post(
-    "/businesses/practitioners/appointment_types/available_times",
+    "/practitioners/available-times",
     response_model=AvailableTimeResponse,
 )
 async def get_available_times(
-    business_id: int,
-    practitioner_id: int,
-    appointment_type_id: int,
-    from_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
-    to_date: str = Query(..., description="End date in YYYY-MM-DD format"),
+   avaliabilities_request: AvailabilityRequest
 ) -> AvailableTimeResponse:
     client = ClinikoClient(settings.cliniko_api_key, settings.cliniko_base_url)
     try:
         result = await client.get_available_times(
-            business_id=business_id,
-            practitioner_id=practitioner_id,
-            appointment_type_id=appointment_type_id,
-            from_date=from_date,
-            to_date=to_date,
+            business_id=avaliabilities_request.business_id,
+            practitioner_id=avaliabilities_request.practitioner_id,
+            appointment_type_id="1999469371147169774",#hardcoded for now
+            from_date=avaliabilities_request.from_date,
+            to_date=avaliabilities_request.to_date,
         )
     except httpx.HTTPStatusError as exc:
         raise HTTPException(status_code=exc.response.status_code, detail=exc.response.text)
     finally:
         await client.close()
 
-    available_times = result.get("available_times", result.get("times", []))
+    available_times = result.get("available_times")
     return AvailableTimeResponse(
-        business_id=business_id,
-        practitioner_id=practitioner_id,
-        appointment_type_id=appointment_type_id,
-        from_date=from_date,
-        to_date=to_date,
         available_times=available_times,
-        raw_data=result,
     )
 
 

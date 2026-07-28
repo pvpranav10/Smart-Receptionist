@@ -39,7 +39,7 @@ Body:
 - `branch_name`: Configured branch key from `BRANCH_LOCATION_MAP`
 - `starts_at`: ISO date/time string
 - `note`: optional note
-- `provider_id`: optional provider ID
+- `practitioner_id`: optional provider ID
 
 ### Retrieve patient details
 GET `/patients/{patient_id}`
